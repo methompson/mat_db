@@ -78,6 +78,17 @@ export function findIndexRecursive(
 }
 
 export function findIndex(key: string, equal: boolean): number {
+  // If we're less than 100 keys long, we can just use findIndex and probably
+  // have fewer ops and be faster. Anything more and we can probably reduce
+  // the number of ops by using a binary search
+  if (sortedKeys.length < 100) {
+    const op = equal
+      ? (k: SortedKeyData) => k.key >= key
+      : (k: SortedKeyData) => k.key > key;
+
+    return sortedKeys.findIndex((k) => op(k));
+  }
+
   return findIndexRecursive(key, equal, 0, sortedKeys.length - 1);
 }
 
