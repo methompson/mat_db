@@ -1,4 +1,5 @@
 import { isUndefinedOrNull } from '@/src/utils/type_guards';
+import { arrayToObject } from '@/src/utils/array_to_obj';
 
 interface SortedKeyData {
   key: string;
@@ -24,47 +25,100 @@ export function addSortedKey(id: string, sortKey: string): void {
   sortedKeys.sort((a, b) => a.key.localeCompare(b.key));
 }
 
+export function bulkAddSortedKey(add: { id: string; key: string }[]): void {
+  const mappedResults = arrayToObject(sortedKeys, (item) => item.key);
+
+  add.forEach((item) => {
+    const data = mappedResults[item.key] ?? { key: item.key, id: new Set() };
+    data.id.add(item.id);
+    mappedResults[item.key] = data;
+  });
+
+  const arrayData = Object.values(mappedResults);
+
+  arrayData.sort((a, b) => a.key.localeCompare(b.key));
+
+  // Actually clears the array
+  sortedKeys.length = 0;
+
+  for (const item of arrayData) {
+    sortedKeys.push(item);
+  }
+}
+
+export function findIndexRecursive(
+  key: string,
+  equal: boolean,
+  lowerBound: number,
+  upperBound: number,
+): number {
+  const middle = Math.floor((upperBound + lowerBound) / 2);
+
+  const foundKey = sortedKeys[middle]?.key;
+
+  if (isUndefinedOrNull(foundKey)) {
+    throw new Error('Out of bounds');
+  }
+
+  if (foundKey === key) {
+    return middle;
+  }
+
+  if (lowerBound === upperBound) {
+    return -1;
+  }
+
+  const op = equal ? foundKey >= key : foundKey > key;
+
+  if (op) {
+    return findIndexRecursive(key, equal, lowerBound, middle);
+  }
+
+  return findIndexRecursive(key, equal, middle + 1, upperBound);
+}
+
+export function findIndex(key: string, equal: boolean): number {
+  return findIndexRecursive(key, equal, 0, sortedKeys.length - 1);
+}
+
 export function greaterThanQuery(greaterThan: string): SortedKeyData[] {
-  const index = sortedKeys.findIndex((key) => key.key > greaterThan);
+  const index = findIndex(greaterThan, false);
   if (index < 0) {
     return [];
   }
 
   return sortedKeys.slice(index);
-  // return sortedKeys.slice(index).flatMap((key) => key.id);
 }
 
 export function greaterThanEqualQuery(greaterThanEqual: string) {
-  const index = sortedKeys.findIndex((key) => key.key >= greaterThanEqual);
+  const index = findIndex(greaterThanEqual, true);
 
   if (index < 0) {
     return [];
   }
 
   return sortedKeys.slice(index);
-  // return sortedKeys.slice(index).flatMap((key) => key.id);
 }
 
 export function lessThanQuery(lessThan: string) {
-  const index = sortedKeys.findIndex((key) => key.key >= lessThan);
+  const index = findIndex(lessThan, true);
+  // const index = sortedKeys.findIndex((key) => key.key >= lessThan);
 
   if (index < 0) {
     return sortedKeys.slice();
   }
 
   return sortedKeys.slice(0, index);
-  // return sortedKeys.slice(0, index).flatMap((key) => key.id);
 }
 
 export function lessThanEqualQuery(lessThanEqual: string) {
-  const index = sortedKeys.findIndex((key) => key.key > lessThanEqual);
+  const index = findIndex(lessThanEqual, false);
 
   if (index < 0) {
     return sortedKeys.slice();
   }
 
   return sortedKeys.slice(0, index);
-  // return sortedKeys.slice(0, index).flatMap((key) => key.id);
 }
 
 export function betweenQuery(start: string, end: string) {
@@ -76,8 +130,10 @@ export function betweenQuery(start: string, end: string) {
     startKey = start;
     endKey = end;
   }
-  const startIndex = sortedKeys.findIndex((key) => key.key >= startKey);
-  const endIndex = sortedKeys.findIndex((key) => key.key > endKey);
+  const startIndex = findIndex(startKey, true);
+  const endIndex = findIndex(endKey, false);
+  // const startIndex = sortedKeys.findIndex((key) => key.key >= startKey);
+  // const endIndex = sortedKeys.findIndex((key) => key.key > endKey);
 
   if (startIndex < 0) {
     return [];
@@ -105,5 +161,4 @@ export function betweenQuery(start: string, end: string) {
   }
 
   return sortedKeys.slice(startIndex, endIndex);
-  // return sortedKeys.slice(startIndex, endIndex).flatMap((key) => key.id);
 }

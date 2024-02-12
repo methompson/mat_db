@@ -1,6 +1,8 @@
 import {
   addSortedKey,
   betweenQuery,
+  bulkAddSortedKey,
+  findIndexRecursive,
   greaterThanEqualQuery,
   greaterThanQuery,
   lessThanEqualQuery,
@@ -67,6 +69,143 @@ describe('sortedKeys', () => {
         someDate = new Date(someDate.getTime() + ONE_DAY_IN_MILLISECONDS);
         addSortedKey(`id${i}`, `punch#${dateString}`);
       }
+    });
+
+    describe('findIndexRecursive', () => {
+      test('returns the index of the key when the key exists (lower bound)', () => {
+        const index = findIndexRecursive(
+          'punch#2021-01-15',
+          true,
+          0,
+          sortedKeys.length,
+        );
+
+        expect(index).toBe(14);
+      });
+
+      test('returns the index of the key when the key exists (upper bound)', () => {
+        const keyToFind = 'punch#2021-01-22';
+        const index = findIndexRecursive(
+          keyToFind,
+          true,
+          0,
+          sortedKeys.length - 1,
+        );
+        const expectedIndex = sortedKeys.findIndex(
+          (key) => key.key === keyToFind,
+        );
+
+        expect(index).toBe(expectedIndex);
+      });
+
+      test('returns the index of the key when the key exists and it is the first key', () => {
+        const index = findIndexRecursive(
+          'punch#2021-01-01',
+          true,
+          0,
+          sortedKeys.length - 1,
+        );
+        expect(index).toBe(0);
+      });
+
+      test('returns the index of the key when the key exists and it is the last key', () => {
+        const index = findIndexRecursive(
+          'punch#2021-01-30',
+          true,
+          0,
+          sortedKeys.length - 1,
+        );
+        expect(index).toBe(29);
+      });
+
+      test('returns the index of the key when the key does not exist', () => {
+        const index = findIndexRecursive(
+          'punch#2021-01-31',
+          true,
+          0,
+          sortedKeys.length - 1,
+        );
+        expect(index).toBe(-1);
+      });
+
+      // Performance is tricky to test. If just this test is run, the built-in
+      // findIndex is faster. If all tests are run, the custom findIndex is
+      // faster. Presumably, this is due to JIT optimizations.
+      test('performance check small data set', () => {
+        const startId = 40;
+        const iterations = 1000;
+        const data: { id: string; key: string }[] = [];
+        const needle = `value#${Math.round(iterations / 2)}`;
+
+        for (let i = 0; i < iterations; i++) {
+          data.push({ id: `id${startId + i}`, key: `value#${i}` });
+        }
+
+        bulkAddSortedKey(data);
+
+        const startA = performance.now();
+        const index = findIndexRecursive(
+          needle,
+          true,
+          0,
+          sortedKeys.length - 1,
+        );
+        const endA = performance.now();
+
+        const startB = performance.now();
+        const expectedIndex = sortedKeys.findIndex((key) => key.key === needle);
+        const endB = performance.now();
+
+        const faster = endA - startA < endB - startB ? 'custom' : 'builtIn';
+
+        console.log({
+          custom: endA - startA,
+          builtIn: endB - startB,
+          faster,
+        });
+
+        expect(index).toBe(expectedIndex);
+
+        // expect(endA - startA).toBeLessThan(endB - startB);
+      });
+
+      test('performance check large data set', () => {
+        const startId = 40;
+        const iterations = 100000;
+        const data: { id: string; key: string }[] = [];
+        const needle = `value#${Math.round(iterations / 2)}`;
+
+        for (let i = 0; i < iterations; i++) {
+          data.push({ id: `id${startId + i}`, key: `value#${i}` });
+        }
+
+        bulkAddSortedKey(data);
+
+        const startA = performance.now();
+        const index = findIndexRecursive(
+          needle,
+          true,
+          0,
+          sortedKeys.length - 1,
+        );
+        const endA = performance.now();
+
+        const startB = performance.now();
+        const expectedIndex = sortedKeys.findIndex((key) => key.key === needle);
+        const endB = performance.now();
+
+        const faster = endA - startA < endB - startB ? 'custom' : 'builtIn';
+
+        console.log({
+          custom: endA - startA,
+          builtIn: endB - startB,
+          faster,
+        });
+
+        expect(index).toBe(expectedIndex);
+
+        expect(endA - startA).toBeLessThan(endB - startB);
+      });
     });
 
     describe('greaterThanQuery', () => {
