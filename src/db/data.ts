@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { addIndexedSortKey } from './indexed_sort_keys';
 import { addSortedKey } from './sorted_keys';
+import { addIndexedKeyPermutations } from './indexed_key_permutations';
 
 /**
  * The data.
