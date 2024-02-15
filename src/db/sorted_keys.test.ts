@@ -12,6 +12,37 @@ import {
 
 const ONE_DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 
+function benchmark(iterations: number) {
+  const startId = 40;
+  const data: { id: string; key: string }[] = [];
+  const needle = `value#${Math.round(iterations / 2 + iterations * 0.1)}`;
+
+  for (let i = 0; i < iterations; i++) {
+    data.push({ id: `id${startId + i}`, key: `value#${i}` });
+  }
+
+  bulkAddSortedKey(data);
+
+  const startA = performance.now();
+  const index = findIndexRecursive(needle, true, 0, sortedKeys.length - 1);
+  const endA = performance.now();
+
+  const startB = performance.now();
+  const expectedIndex = sortedKeys.findIndex((key) => key.key === needle);
+  const endB = performance.now();
+
+  const faster = endA - startA < endB - startB ? 'custom' : 'builtIn';
+
+  console.log({
+    dataSet: `${iterations} record data set`,
+    custom: `${(endA - startA).toFixed(4)}ms`,
+    builtIn: `${(endB - startB).toFixed(4)}ms`,
+    faster,
+  });
+
+  expect(index).toBe(expectedIndex);
+}
+
 describe('sortedKeys', () => {
   beforeEach(() => {
     while (sortedKeys.length > 0) {
@@ -131,80 +162,20 @@ describe('sortedKeys', () => {
       // Performance is tricky to test. If just this test is run, the built-in
       // findIndex is faster. If all tests are run, the custom findIndex is
       // faster. Presumably, this is due to JIT optimizations.
+      test('performance check tiny data set', () => {
+        benchmark(100);
+      });
+
       test('performance check small data set', () => {
-        const startId = 40;
-        const iterations = 1000;
-        const data: { id: string; key: string }[] = [];
-        const needle = `value#${Math.round(iterations / 2)}`;
-
-        for (let i = 0; i < iterations; i++) {
-          data.push({ id: `id${startId + i}`, key: `value#${i}` });
-        }
-
-        bulkAddSortedKey(data);
-
-        const startA = performance.now();
-        const index = findIndexRecursive(
-          needle,
-          true,
-          0,
-          sortedKeys.length - 1,
-        );
-        const endA = performance.now();
-
-        const startB = performance.now();
-        const expectedIndex = sortedKeys.findIndex((key) => key.key === needle);
-        const endB = performance.now();
-
-        const faster = endA - startA < endB - startB ? 'custom' : 'builtIn';
-
-        console.log({
-          custom: endA - startA,
-          builtIn: endB - startB,
-          faster,
-        });
-
-        expect(index).toBe(expectedIndex);
-
-        // expect(endA - startA).toBeLessThan(endB - startB);
+        benchmark(1000);
       });
 
       test('performance check large data set', () => {
-        const startId = 40;
-        const iterations = 100000;
-        const data: { id: string; key: string }[] = [];
-        const needle = `value#${Math.round(iterations / 2)}`;
+        benchmark(100000);
+      });
 
-        for (let i = 0; i < iterations; i++) {
-          data.push({ id: `id${startId + i}`, key: `value#${i}` });
-        }
-
-        bulkAddSortedKey(data);
-
-        const startA = performance.now();
-        const index = findIndexRecursive(
-          needle,
-          true,
-          0,
-          sortedKeys.length - 1,
-        );
-        const endA = performance.now();
-
-        const startB = performance.now();
-        const expectedIndex = sortedKeys.findIndex((key) => key.key === needle);
-        const endB = performance.now();
-
-        const faster = endA - startA < endB - startB ? 'custom' : 'builtIn';
-
-        console.log({
-          custom: endA - startA,
-          builtIn: endB - startB,
-          faster,
-        });
-
-        expect(index).toBe(expectedIndex);
-
-        expect(endA - startA).toBeLessThan(endB - startB);
+      test('performance check giant data set', () => {
+        benchmark(1000000);
       });
     });
 

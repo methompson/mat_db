@@ -5,11 +5,12 @@
   "main": "index.js",
   "scripts": {
     "build": "tsup ./src/main.ts --minify",
-    "dev": "tsup ./src/main.ts --onSuccess \"node dist/main.js\""
+    "dev": "tsup ./src/main.ts --watch --env.NODE_ENV development --onSuccess \"node dist/main.js\""
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/jest": "^29.5.12",
     "@types/uuid": "^9.0.8",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
@@ -27,6 +28,8 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "dotenv": "^16.4.3",
+    "express": "^4.18.2",
     "uuid": "^9.0.1"
   }
 }
